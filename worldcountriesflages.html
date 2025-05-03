@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Where in the World</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      background-color: #fafafa;
+      color: #111;
+      transition: background 0.3s, color 0.3s;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem;
+      background-color: #fff;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      gap: 1rem;
+    }
+
+    h4 {
+      margin: 0;
+      font-size: 1.2rem;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border: none;
+      background-color: #eee;
+      border-radius: 5px;
+    }
+
+    .search-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .search-input {
+      padding: 0.5rem;
+      width: 200px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      gap: 1.5rem;
+      padding: 1rem;
+    }
+
+    .country-card {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+
+    .country-card:hover {
+      transform: scale(1.03);
+    }
+
+    .flag-img {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+    }
+
+    .country-info {
+      padding: 1rem;
+    }
+
+    .full-screen {
+      grid-column: 1 / -1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .back-button {
+      margin: 1rem;
+      background-color: #ccc;
+    }
+
+    .lll {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background-color: white;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      z-index: 10;
+      display: none;
+      flex-direction: column;
+    }
+
+    .lll button {
+      width: 100%;
+      padding: 0.5rem;
+      border: none;
+      background: none;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .ll {
+      display: flex !important;
+      flex-direction: column;
+    }
+
+    .clear-region-btn {
+      margin-left: 1rem;
+    }
+
+    /* Dark mode styles */
+    .dark-mode {
+      background-color: #1e1e1e;
+      color: #f5f5f5;
+    }
+
+    .dark-mode header {
+      background-color: #2c2c2c;
+    }
+
+    .dark-mode .country-card {
+      background-color: #333;
+      color: #f5f5f5;
+    }
+
+    .dark-mode .lll {
+      background-color: #444;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h4>Where in the world</h4>
+    <button id="themeToggle" aria-label="Toggle Theme">
+      <i class="fas fa-moon"></i>
+    </button>
+    <div class="search-container">
+      <i class="fas fa-magnifying-glass"></i>
+      <input type="search" id="searchInput" placeholder="Search for a country" class="search-input" />
+    </div>
+    <div style="position: relative;">
+      <button id="regionBtn" style="width: 150px; height: 40px;">Filter by Region <i class="fas fa-angle-down"></i></button>
+      <div id="regionDropdown" class="lll"></div>
+    </div>
+    <button id="clearRegion" class="clear-region-btn" style="display: none;">Clear Region Filter</button>
+  </header>
+
+  <div class="grid-container" id="countryGrid"></div>
+
+  <script>
+    const countryGrid = document.getElementById("countryGrid");
+    const searchInput = document.getElementById("searchInput");
+    const regionDropdown = document.getElementById("regionDropdown");
+    const regionBtn = document.getElementById("regionBtn");
+    const themeToggle = document.getElementById("themeToggle");
+    const clearRegion = document.getElementById("clearRegion");
+
+    let countriesData = [];
+    let selectedRegion = "";
+    let searchText = "";
+
+    const fetchCountries = async () => {
+      try {
+        const res = await fetch("https://restcountries.com/v2/all");
+        const data = await res.json();
+        countriesData = data.sort(() => Math.random() - 0.5).slice(0, 300);
+        renderRegionDropdown();
+        renderCountries();
+      } catch (err) {
+        countryGrid.innerHTML = "<p>Error fetching countries.</p>";
+      }
+    };
+
+    const renderRegionDropdown = () => {
+      const regions = [...new Set(countriesData.map(c => c.region).filter(Boolean))];
+      regionDropdown.innerHTML = "";
+      regions.forEach(region => {
+        const btn = document.createElement("button");
+        btn.textContent = region;
+        btn.onclick = () => {
+          selectedRegion = region;
+          clearRegion.style.display = "inline-block";
+          renderCountries();
+          regionDropdown.style.display = "none";
+        };
+        regionDropdown.appendChild(btn);
+      });
+    };
+
+    const renderCountries = () => {
+      const filtered = countriesData
+        .filter(c => !selectedRegion || c.region === selectedRegion)
+        .filter(c => c.name.toLowerCase().includes(searchText.toLowerCase()));
+
+      countryGrid.innerHTML = "";
+
+      if (filtered.length === 0) {
+        countryGrid.innerHTML = "<p style='text-align:center;margin-top:2rem;'>No countries found.</p>";
+        return;
+      }
+
+      filtered.forEach((country, index) => {
+        const card = document.createElement("div");
+        card.className = `country-card item-${index + 1}`;
+        card.innerHTML = `
+          <img class="flag-img" src="https://flagcdn.com/w320/${country.alpha2Code.toLowerCase()}.png" alt="${country.name}" />
+          <div class="country-info">
+            <h3>${country.name}</h3>
+            <p><strong>Subregion:</strong> ${country.subregion}</p>
+            <p><strong>Area:</strong> ${country.area?.toLocaleString() ?? "N/A"} km²</p>
+          </div>
+        `;
+        card.onclick = () => showCountryDetail(country);
+        countryGrid.appendChild(card);
+      });
+    };
+
+    const showCountryDetail = (country) => {
+      countryGrid.innerHTML = `
+        <div class="country-card full-screen">
+          <button class="back-button" onclick="renderCountries()">Back</button>
+          <img class="flag-img" src="https://flagcdn.com/w320/${country.alpha2Code.toLowerCase()}.png" alt="${country.name}" />
+          <div class="country-info">
+            <h3>${country.name}</h3>
+            <p><strong>Subregion:</strong> ${country.subregion}</p>
+            <p><strong>Area:</strong> ${country.area?.toLocaleString()} km²</p>
+            <p><strong>Timezones:</strong> ${country.timezones?.join(", ")}</p>
+            <p><strong>Borders:</strong> ${country.borders?.join(", ") || "None"}</p>
+            <p><strong>Native Name:</strong> ${country.nativeName}</p>
+            <p><strong>Calling Codes:</strong> +${country.callingCodes?.join(", +")}</p>
+            <p><strong>Border Countries:</strong></p>
+            <ul>${(country.borders || []).map(code => `<li>${code}</li>`).join("") || "<li>None</li>"}</ul>
+          </div>
+        </div>
+      `;
+    };
+
+    searchInput.addEventListener("input", (e) => {
+      searchText = e.target.value;
+      renderCountries();
+    });
+
+    regionBtn.addEventListener("click", () => {
+      regionDropdown.classList.toggle("ll");
+    });
+
+    themeToggle.addEventListener("click", () => {
+      document.body.classList.toggle("dark-mode");
+      const icon = themeToggle.querySelector("i");
+      icon.classList.toggle("fa-moon");
+      icon.classList.toggle("fa-sun");
+    });
+
+    clearRegion.addEventListener("click", () => {
+      selectedRegion = "";
+      clearRegion.style.display = "none";
+      renderCountries();
+    });
+
+    fetchCountries();
+  </script>
+</body>
+</html>
