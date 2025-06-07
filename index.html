@@ -142,21 +142,29 @@
     }
   </style>
 </head>
-<body>
-  <header>
+<header>
     <h4>Where in the world</h4>
     <button id="themeToggle" aria-label="Toggle Theme">
       <i class="fas fa-moon"></i>
     </button>
     <div class="search-container">
       <i class="fas fa-magnifying-glass"></i>
-      <input type="search" id="searchInput" placeholder="Search for a country" class="search-input" />
+      <input
+        type="search"
+        id="searchInput"
+        placeholder="Search for a country"
+        class="search-input"
+      />
     </div>
     <div style="position: relative;">
-      <button id="regionBtn" style="width: 150px; height: 40px;">Filter by Region <i class="fas fa-angle-down"></i></button>
-      <div id="regionDropdown" class="lll"></div>
+      <button id="regionBtn" style="width: 150px; height: 40px;">
+        Filter by Region <i class="fas fa-angle-down"></i>
+      </button>
+      <div id="regionDropdown"></div>
     </div>
-    <button id="clearRegion" class="clear-region-btn" style="display: none;">Clear Region Filter</button>
+    <button id="clearRegion" class="clear-region-btn" style="display: none;">
+      Clear Region Filter
+    </button>
   </header>
 
   <div class="grid-container" id="countryGrid"></div>
@@ -175,27 +183,49 @@
 
     const fetchCountries = async () => {
       try {
-        const res = await fetch("https://restcountries.com/v2/all");
-        const data = await res.json();
+        const res = await fetch("https://restcountries.com/v3.1/all");
+        const rawData = await res.json();
+        // Map data from v3.1 format to match old keys your code uses
+        const data = rawData.map((c) => ({
+          name: c.name.common,
+          alpha2Code: c.cca2,
+          region: c.region,
+          subregion: c.subregion || "N/A",
+          area: c.area,
+          timezones: c.timezones,
+          borders: c.borders,
+          nativeName:
+            c.name.nativeName && Object.values(c.name.nativeName)[0]
+              ? Object.values(c.name.nativeName)[0].common
+              : c.name.common,
+          callingCodes:
+            c.idd && c.idd.root && c.idd.suffixes
+              ? c.idd.suffixes.map((s) => c.idd.root + s)
+              : [],
+        }));
+
         countriesData = data.sort(() => Math.random() - 0.5).slice(0, 300);
         renderRegionDropdown();
         renderCountries();
       } catch (err) {
         countryGrid.innerHTML = "<p>Error fetching countries.</p>";
+        console.error("Fetch error:", err);
       }
     };
 
     const renderRegionDropdown = () => {
-      const regions = [...new Set(countriesData.map(c => c.region).filter(Boolean))];
+      const regions = [
+        ...new Set(countriesData.map((c) => c.region).filter(Boolean)),
+      ];
       regionDropdown.innerHTML = "";
-      regions.forEach(region => {
+      regions.forEach((region) => {
         const btn = document.createElement("button");
         btn.textContent = region;
         btn.onclick = () => {
           selectedRegion = region;
           clearRegion.style.display = "inline-block";
           renderCountries();
-          regionDropdown.style.display = "none";
+          regionDropdown.classList.remove("ll");
         };
         regionDropdown.appendChild(btn);
       });
@@ -203,13 +233,14 @@
 
     const renderCountries = () => {
       const filtered = countriesData
-        .filter(c => !selectedRegion || c.region === selectedRegion)
-        .filter(c => c.name.toLowerCase().includes(searchText.toLowerCase()));
+        .filter((c) => !selectedRegion || c.region === selectedRegion)
+        .filter((c) => c.name.toLowerCase().includes(searchText.toLowerCase()));
 
       countryGrid.innerHTML = "";
 
       if (filtered.length === 0) {
-        countryGrid.innerHTML = "<p style='text-align:center;margin-top:2rem;'>No countries found.</p>";
+        countryGrid.innerHTML =
+          "<p style='text-align:center;margin-top:2rem;'>No countries found.</p>";
         return;
       }
 
@@ -237,13 +268,13 @@
           <div class="country-info">
             <h3>${country.name}</h3>
             <p><strong>Subregion:</strong> ${country.subregion}</p>
-            <p><strong>Area:</strong> ${country.area?.toLocaleString()} km²</p>
-            <p><strong>Timezones:</strong> ${country.timezones?.join(", ")}</p>
-            <p><strong>Borders:</strong> ${country.borders?.join(", ") || "None"}</p>
+            <p><strong>Area:</strong> ${country.area?.toLocaleString() ?? "N/A"} km²</p>
+            <p><strong>Timezones:</strong> ${country.timezones?.join(", ") ?? "N/A"}</p>
+            <p><strong>Borders:</strong> ${country.borders?.join(", ") ?? "None"}</p>
             <p><strong>Native Name:</strong> ${country.nativeName}</p>
-            <p><strong>Calling Codes:</strong> +${country.callingCodes?.join(", +")}</p>
+            <p><strong>Calling Codes:</strong> +${country.callingCodes?.join(", +") ?? "N/A"}</p>
             <p><strong>Border Countries:</strong></p>
-            <ul>${(country.borders || []).map(code => `<li>${code}</li>`).join("") || "<li>None</li>"}</ul>
+            <ul>${(country.borders || []).map((code) => `<li>${code}</li>`).join("") || "<li>None</li>"}</ul>
           </div>
         </div>
       `;
